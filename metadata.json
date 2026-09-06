@@ -1,0 +1,11 @@
+{
+  "name": "Privacz",
+  "description": "Serverless multi-peer browser workspace with encrypted direct file transfers, real-time secure chat, WebRTC audio/video calls, collaborative canvas, shared clipboard, and FIDE chess.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
