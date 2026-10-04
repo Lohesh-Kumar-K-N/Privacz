@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacz</title>
+    <meta name="description" content="Serverless multi-peer browser workspace with encrypted direct file transfers, real-time secure chat, WebRTC audio/video calls, collaborative canvas, shared clipboard, and FIDE chess.">
+    <meta property="og:title" content="Privacz">
+    <meta property="og:description" content="Serverless multi-peer browser workspace with encrypted direct file transfers, real-time secure chat, WebRTC audio/video calls, collaborative canvas, shared clipboard, and FIDE chess.">
+    <meta property="og:type" content="website">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+</head>
+<body>
+    <div id="tab-blocker" class="hidden" style="position: fixed; inset: 0; background: var(--bg-main); z-index: 9999; display: flex; align-items: center; justify-content: center; text-align: center; flex-direction: column;">
+        <div>
+            <h1>Session Duplicated</h1>
+            <p>Multiple tabs detected. Active network mesh routing protected to prevent topology collapse.</p>
+            <p class="subtext">Please return to your primary active tab.</p>
+        </div>
+    </div>
+
+    <!-- Anti-Obstruction Notification Stacking Grid -->
+    <div id="notification-stack" class="notification-stack" aria-live="polite"></div>
+
+    <!-- SECTION 2: INITIAL PORTAL LANDING VIEWPORT -->
+    <div id="view-landing" class="viewport">
+        <button id="btn-about" class="btn pastel-gray btn-about" aria-label="About Privacz">About</button>
+        
+        <div class="landing-center">
+            <h1 class="logo">Privacz</h1>
+            <p class="hero-description" style="max-width: 800px; margin: 0 auto 2rem auto; line-height: 1.6;">
+    A 100% serverless, zero-dependency, ultra-low latency Peer-to-Peer (P2P) collaborative workspace.<br>
+    <b>Features:</b> End-to-End P2P Architecture • Global Serverless Handshake • Secure File Transfer • Collaborative Canvas • Voice Messaging • Built-in Chess.
+</p>
+            <div class="landing-actions">
+                <button id="btn-file-transfer" class="btn btn-hero pastel-blue">File Transfer</button>
+                <button id="btn-connect" class="btn btn-hero pastel-mint">Connect</button>
+            </div>
+            
+            <div class="tech-stack-container">
+                <div class="tech-card">
+                    <div class="tech-anim-mesh">
+                        <div class="node n1"></div><div class="node n2"></div><div class="node n3"></div>
+                        <div class="line l1"></div><div class="line l2"></div><div class="line l3"></div>
+                    </div>
+                    <h3>End-to-End P2P Architecture</h3>
+                    <p>All chat messages, file chunks, and voice data stream directly from browser to browser via WebRTC DataChannels. No data is ever stored on a centralized database.</p>
+                </div>
+                <div class="tech-card">
+                    <div class="tech-anim-pulse">
+                        <div class="pulse-ring"></div>
+                        <div class="pulse-core"></div>
+                    </div>
+                    <h3>Global Serverless Handshake</h3>
+                    <p>Uses a free global relay strictly as an ephemeral mailman to swap initial cryptographic connection keys across the open internet, dropping out immediately once the P2P tunnel is established.</p>
+                </div>
+                <div class="tech-card">
+                    <div class="tech-anim-wave">
+                        <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+                    </div>
+                    <h3>Collaborative Features</h3>
+                    <p>Draw, sketch, and brainstorm in real-time. Send massive files without cloud storage limits, exchange voice snippets, and play real-time chess with your connected peers.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Modal -->
+    <div id="modal-about" class="modal hidden">
+        <div class="modal-content" style="max-width: 440px;">
+            <h2>About Privacz</h2>
+            <p style="margin: 0.75rem 0; color: var(--text-main); font-size: 0.95rem; line-height: 1.6;">
+                <strong>Privacz</strong> is an ultra-low latency, zero-server browser operating system designed for sovereign peer-to-peer collaboration without data-harvesting middlemen.
+            </p>
+            <div style="background: var(--bg-card); padding: 1rem; border-radius: 12px; border: 1px solid var(--border-soft); margin-bottom: 1.25rem; text-align: left;">
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">Developer Contact:</p>
+                <p style="font-size: 1rem; font-weight: 700; color: var(--text-main); word-break: break-all;">
+                    📧 <a href="mailto:loheshkumar10@gmail.com" style="color: inherit; text-decoration: underline;">loheshkumar10@gmail.com</a>
+                </p>
+            </div>
+            <button id="btn-close-about" class="btn pastel-mint" style="width: 100%;">Close</button>
+        </div>
+    </div>
+
+    <!-- Host Setup Modal (VIEW OF PEER 1) -->
+    <div id="modal-host-setup" class="modal hidden">
+        <div class="modal-content">
+            <h2>Configure Mesh Network</h2>
+            <p class="modal-desc">Select how many peers will join this encrypted session:</p>
+            
+            <div class="counter-slider-group">
+                <span class="counter-label">Expected Peers:</span>
+                <input type="range" id="slider-peer-count" min="1" max="16" value="2" class="pastel-slider">
+                <span id="counter-val" class="counter-badge">2</span>
+            </div>
+
+            <div id="qr-container" class="qr-box">
+                <img id="qr-image" src="" alt="Session QR Code" style="display: none;">
+                <div id="qr-placeholder" class="qr-placeholder">Generating Secure QR...</div>
+            </div>
+
+            <div class="url-copy-box">
+                <input type="text" id="host-url-box" readonly value="Generating unique token...">
+                <button id="btn-copy-url" class="btn pastel-blue btn-copy">Copy Link</button>
+            </div>
+
+            <p class="modal-helper-text">
+                Scan the QR code on mobile or share the link above.<br>
+                Wait in this lobby until all expected peers connect, or click <strong>Continue Anyway</strong> to enter the workspace early.
+            </p>
+
+            <div id="host-connection-status" style="margin-bottom: 1rem; font-weight: 600; font-size: 1.1rem; color: var(--text-main); text-align: center;">0 / 1 Guests Connected</div>
+
+            <button id="btn-continue-host" class="btn pastel-mint btn-large">Continue</button>
+        </div>
+    </div>
+    
+    <div id="modal-file-transfer" class="modal hidden">
+        <div class="modal-content" style="max-width: 500px; width: 90%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 id="ft-modal-title" style="margin: 0; font-size: 1.5rem; font-weight: 600;">Secure File Transfer</h2>
+                <button id="btn-close-ft" class="icon-btn" style="color: var(--text-muted); font-size: 1.5rem;">✕</button>
+            </div>
+            
+            <div id="ft-share-section">
+                <p class="modal-desc" style="margin-bottom: 1rem; color: var(--text-muted);">Share this secure link with the receiver. Connection is direct P2P.</p>
+                <div class="url-copy-box">
+                    <input type="text" id="ft-url-box" readonly>
+                    <button id="btn-copy-ft-url" class="btn pastel-blue btn-copy">Copy</button>
+                </div>
+                <div class="qr-box" style="margin-top: 1rem; text-align: center;">
+                    <img id="ft-qr-image" src="" alt="Session QR Code" style="display: none; margin: 0 auto; border-radius: 8px;">
+                </div>
+            </div>
+
+            <div id="ft-progress-grid" class="file-progress-grid" style="margin-top: 1.5rem; max-height: 400px; overflow-y: auto; padding: 0.5rem; display: grid; gap: 1rem;">
+                <!-- File Cards will inject here -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Guest Loading Modal (VIEW OF PEERS 2, 3, 4+) -->
+    <div id="modal-guest-loading" class="modal hidden">
+        <div class="modal-content">
+            <div class="pulse-ring"></div>
+            <h2>Connecting to Privacz Network...</h2>
+            <p id="guest-status" class="loading-pulse">Performing WebRTC signaling handshake...</p>
+        </div>
+    </div>
+
+    <!-- Fallback Modal for Clipboard Paste (Permissions Policy Guard) -->
+    <div id="modal-paste-fallback" class="modal hidden">
+        <div class="modal-content paste-fallback-box">
+            <h2>Paste into Clipboard</h2>
+            <p class="modal-desc">Direct system clipboard reading is restricted by browser security policies in embedded frames. Please paste your text or code below (Ctrl+V / Cmd+V):</p>
+            <textarea id="paste-fallback-textarea" rows="6" placeholder="Paste text or code snippet here..."></textarea>
+            <div class="modal-actions-right">
+                <button id="btn-paste-cancel" class="btn pastel-gray">Cancel</button>
+                <button id="btn-paste-insert" class="btn pastel-mint">Insert into Board</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Name Modal -->
+    <div id="modal-change-name" class="modal hidden">
+        <div class="modal-content" style="max-width: 360px; text-align: left;">
+            <h2>Change Identity</h2>
+            <p class="modal-desc">Enter your new display name:</p>
+            <input type="text" id="input-change-name" placeholder="New Name" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-soft); margin-top: 0.5rem; margin-bottom: 1rem;">
+            <div class="modal-actions-right">
+                <button id="btn-cancel-name" class="btn pastel-gray">Cancel</button>
+                <button id="btn-save-name" class="btn pastel-mint">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Poll Creation Modal (Host Only) -->
+    <div id="modal-create-poll" class="modal hidden">
+        <div class="modal-content" style="max-width: 480px; text-align: left;">
+            <h2>Create Live Poll</h2>
+            <p class="modal-desc">Distribute a real-time question to all connected peers:</p>
+            <div class="form-group" style="margin-bottom: 0.75rem;">
+                <label style="font-weight: 600; font-size: 0.85rem; color: var(--text-main);">Question:</label>
+                <input type="text" id="poll-question-input" placeholder="e.g., Which tool should we use?" style="width: 100%; padding: 0.6rem; border-radius: 8px; border: 1px solid var(--border-soft); margin-top: 0.25rem;">
+            </div>
+            <div class="form-group" style="margin-bottom: 0.5rem;">
+                <label style="font-weight: 600; font-size: 0.85rem; color: var(--text-main);">Choices (up to 4):</label>
+                <input type="text" id="poll-choice-1" placeholder="Option 1" style="width: 100%; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--border-soft); margin-top: 0.25rem;">
+                <input type="text" id="poll-choice-2" placeholder="Option 2" style="width: 100%; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--border-soft); margin-top: 0.35rem;">
+                <input type="text" id="poll-choice-3" placeholder="Option 3 (Optional)" style="width: 100%; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--border-soft); margin-top: 0.35rem;">
+                <input type="text" id="poll-choice-4" placeholder="Option 4 (Optional)" style="width: 100%; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--border-soft); margin-top: 0.35rem;">
+            </div>
+            <div class="modal-actions-right" style="margin-top: 1rem;">
+                <button id="btn-cancel-poll" class="btn pastel-gray">Cancel</button>
+                <button id="btn-distribute-poll" class="btn pastel-mint">Distribute Poll</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Media Incoming Invite Modals -->
+    <div id="modal-voice-invite" class="modal hidden">
+        <div class="modal-content" style="max-width: 360px;">
+            <div class="ring-pulse">🎙️</div>
+            <h2>Incoming Voice Call</h2>
+            <p id="voice-invite-sender" class="modal-desc">Peer invited you to an audio link.</p>
+            <div style="display: flex; gap: 0.75rem; justify-content: center; margin-top: 1.25rem;">
+                <button id="btn-decline-voice" class="btn hangup-btn" style="flex: 1;">Decline</button>
+                <button id="btn-accept-voice" class="btn pastel-mint" style="flex: 1;">Join Call</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-video-invite" class="modal hidden">
+        <div class="modal-content" style="max-width: 360px;">
+            <div class="ring-pulse">📹</div>
+            <h2>Incoming Video Stream</h2>
+            <p id="video-invite-sender" class="modal-desc">Peer invited you to a video stream.</p>
+            <div style="display: flex; gap: 0.75rem; justify-content: center; margin-top: 1.25rem;">
+                <button id="btn-decline-video" class="btn hangup-btn" style="flex: 1;">Decline</button>
+                <button id="btn-accept-video" class="btn pastel-blue" style="flex: 1;">Join Stream</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pawn Promotion Modal (FIDE Chess) -->
+    <div id="modal-chess-promotion" class="modal hidden">
+        <div class="modal-content" style="max-width: 320px;">
+            <h2>Pawn Promotion</h2>
+            <p class="modal-desc">Choose promotion piece:</p>
+            <div class="promotion-choices">
+                <button class="promo-btn" data-piece="q">♛ Queen</button>
+                <button class="promo-btn" data-piece="r">♜ Rook</button>
+                <button class="promo-btn" data-piece="b">♝ Bishop</button>
+                <button class="promo-btn" data-piece="n">♞ Knight</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 2: THE "PRIVACZ SPACES" ECOSYSTEM LAYOUT OVERLAY -->
+    <div id="view-dashboard" class="viewport hidden">
+        <!-- Persistent System Indicators -->
+        <div class="sys-headers">
+            <div class="sys-brand">Privacz OS</div>
+            <div class="sys-indicators">
+                <div id="sys-diag" class="diag-badge" title="Connection Quality">
+                    <span id="diag-dot" class="dot green"></span>
+                    <span id="diag-text" class="diag-label">Optimal</span>
+                </div>
+                <div id="presence-tracker" class="presence-badge" title="Connected Peers">👁️ 1</div>
+            </div>
+        </div>
+
+        <div class="dashboard-content">
+            <div class="dashboard-greeting">
+                <h2>Privacz Spaces</h2>
+                <p>Select a sovereign peer utility to activate across the mesh</p>
+            </div>
+
+            <!-- Floating Grid of Core Connection Tools -->
+            <div class="os-grid">
+                <button class="app-icon" data-app="file">
+                    <div class="icon-avatar pastel-blue-bg">📁</div>
+                    <span class="label">File Transfer</span>
+                    <span class="badge">Direct P2P</span>
+                </button>
+                <button class="app-icon" data-app="chat">
+                    <div class="icon-avatar pastel-mint-bg">💬</div>
+                    <span class="label">Secure Chat</span>
+                    <span class="badge">Zero Log</span>
+                </button>
+                <button class="app-icon" data-app="voice">
+                    <div class="icon-avatar pastel-lavender-bg">🎙️</div>
+                    <span class="label">Voice Links</span>
+                    <span class="badge">Opus HD</span>
+                </button>
+                <button class="app-icon" data-app="video">
+                    <div class="icon-avatar pastel-pink-bg">📹</div>
+                    <span class="label">Video Streams</span>
+                    <span class="badge">Screen Share</span>
+                </button>
+                <button class="app-icon" data-app="clipboard">
+                    <div class="icon-avatar pastel-yellow-bg">📋</div>
+                    <span class="label">Clipboard</span>
+                    <span class="badge">Live Sync</span>
+                </button>
+                <button class="app-icon" data-app="canvas">
+                    <div class="icon-avatar pastel-teal-bg">🎨</div>
+                    <span class="label">Studio Canvas</span>
+                    <span class="badge">Real-Time</span>
+                </button>
+                <button class="app-icon" data-app="chess">
+                    <div class="icon-avatar pastel-gray-bg">♟️</div>
+                    <span class="label">Grandmaster Chess</span>
+                    <span class="badge">FIDE Rules</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Shell (Wraps active apps with Inter-App Navigation Sidebar) -->
+    <div id="view-app-shell" class="viewport hidden">
+        <div class="sys-headers shell-headers">
+            <div class="shell-left-info">
+                <button id="btn-back-dashboard" class="shell-back-btn" title="Back to Dashboard">🏠 Spaces</button>
+                <span id="shell-app-title" class="shell-title">Application</span>
+                <button id="btn-change-name" title="Change Identity" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer; filter: grayscale(100%); margin-left: 10px;">🆔</button>
+            </div>
+            <div class="sys-indicators">
+                <div id="sys-diag-shell" class="diag-badge">
+                    <span id="diag-dot-shell" class="dot green"></span>
+                    <span id="diag-text-shell" class="diag-label">Optimal</span>
+                </div>
+                <div id="presence-tracker-shell" class="presence-badge">👁️ 1</div>
+            </div>
+        </div>
+
+        <div class="shell-layout">
+            <!-- Navigation Sidebar Menu -->
+            <nav class="nav-sidebar" aria-label="Tool switcher">
+                <button class="nav-icon" data-app="dashboard" title="Spaces Dashboard">🏠</button>
+                <button class="nav-icon" data-app="file" title="File Transfer">📁</button>
+                <button class="nav-icon" data-app="chat" title="Secure Chat">💬</button>
+                <button class="nav-icon" data-app="voice" title="Voice Calls">🎙️</button>
+                <button class="nav-icon" data-app="video" title="Video Calls">📹</button>
+                <button class="nav-icon" data-app="clipboard" title="Document Clipboard">📋</button>
+                <button class="nav-icon" data-app="canvas" title="Studio Canvas">🎨</button>
+                <button class="nav-icon" data-app="chess" title="Grandmaster Chess">♟️</button>
+            </nav>
+            
+            <main class="app-container">
+                <!-- ========================================================== -->
+                <!-- APPLICATION A: THE FILE TRANSFER ENGINE -->
+                <!-- ========================================================== -->
+                <div id="app-file" class="app-view hidden">
+                    <div class="file-engine-header">
+                        <h2>Direct Peer File Pipeline</h2>
+                        <p>Stream files straight between browsers via encrypted DataChannels with zero cloud retention.</p>
+                    </div>
+
+                    <div class="file-drop-zone" id="file-drop-zone">
+                        <div class="drop-icon">📤</div>
+                        <h3>Drag & Drop files anywhere here</h3>
+                        <p>or select multiple files from your native file manager</p>
+                        <input type="file" id="file-input" multiple style="display: none;">
+                        <button class="btn pastel-blue" onclick="document.getElementById('file-input').click()">Browse Files</button>
+                    </div>
+
+                    <!-- Peer 1 Upload Telemetry & Guest Download Progress Grid -->
+                    <div class="progress-section">
+                        <h3>Transfer Queue & Progress Telemetry</h3>
+                        <div id="file-progress-grid" class="progress-grid"></div>
+                    </div>
+                </div>
+
+                <!-- ========================================================== -->
+                <!-- APPLICATION B: THE SECURE CHAT SYSTEM -->
+                <!-- ========================================================== -->
+                <div id="app-chat" class="app-view hidden chat-layout">
+                    <div class="chat-header">
+                        <div class="chat-header-info">
+                            <h3>Secure Stream</h3>
+                            <span id="chat-mode-indicator" class="chat-mode-tag">Mesh Direct</span>
+                        </div>
+                        <div class="chat-tools">
+                            <button class="icon-btn" id="btn-chat-call-voice" title="Voice Call">🎙️</button>
+                            <button class="icon-btn" id="btn-chat-video" title="Video Call">📹</button>
+                            
+                            <!-- Host 3-dot Dropdown (Visible ONLY to Host) -->
+                            <div class="menu-wrap" id="wrap-host-menu">
+                                <button class="icon-btn" id="btn-chat-menu" title="Host Administration">⋮</button>
+                                <div id="chat-dropdown" class="dropdown-menu hidden">
+                                    <button id="menu-clear-chat">Clear Chat (Mesh-wide)</button>
+                                    <button id="menu-export-chat">Export Chat (.txt)</button>
+                                    <button id="menu-import-chat" class="hidden">Import Chat</button>
+                                    <input type="file" id="chat-import-input" style="display: none;" accept=".txt">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chat-messages" id="chat-messages"></div>
+
+                                        <!-- Quoting Snapping Bar -->
+                    <div id="chat-quote-bar" class="chat-quote-bar hidden">
+                        <span class="quote-text" id="quote-text-preview"></span>
+                        <button id="btn-quote-cancel" class="quote-cancel" title="Cancel Quote">×</button>
+                    </div>
+                    <!-- Audio Preview Bar -->
+                    <div id="chat-audio-preview-bar" class="chat-quote-bar hidden" style="justify-content: space-between; padding: 0.5rem 1rem; align-items: center; border-left: 3px solid var(--accent-red);">
+                        <div style="display:flex; align-items:center; gap: 10px;">
+                            <span style="font-size:1.2rem;">🎙️</span>
+                            <audio id="audio-preview-element" controls style="height: 35px; max-width: 200px;"></audio>
+                        </div>
+                        <div style="display:flex; gap: 10px;">
+                            <button id="btn-audio-cancel" class="btn pastel-gray" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Discard</button>
+                            <button id="btn-audio-send" class="btn pastel-mint" style="padding: 0.3rem 0.6rem; font-size: 0.85rem;">Send</button>
+                        </div>
+                    </div>
+                    <!-- Chat Bottom Bar -->
+                    <div class="chat-bottom-bar">
+                        <div class="menu-wrap">
+                            <button class="icon-btn" id="btn-chat-attach" title="Collaborative Tools & Shortcuts">📎</button>
+                            <div id="attach-dropdown" class="dropdown-menu up hidden">
+                                <button data-target="file">📁 Media Sharing</button>
+                                <button data-target="chess">♟️ Chess Engine</button>
+                                <button data-target="canvas">🎨 Draw / Sketch</button>
+                                <button id="btn-tray-live-poll" class="host-only-opt">📊 Live Polls</button>
+                            </div>
+                        </div>
+                        <input type="text" id="chat-input" placeholder="Message secure peer stream..." autocomplete="off">
+                        <button class="icon-btn" id="btn-chat-record" title="Press to record voice" style="color: var(--accent-red);">🎤</button>
+                        <button class="icon-btn btn-send" id="btn-chat-send" title="Send Message">➤</button>
+                    </div>
+                </div>
+
+                <!-- ========================================================== -->
+                <!-- APPLICATION C: VOICE CALLS -->
+                <!-- ========================================================== -->
+                <div id="app-voice" class="app-view hidden flex-center voice-layout">
+                    <div class="voice-header-box">
+                        <h2>Opus High-Definition Voice Link</h2>
+                        <p>Direct peer audio channels with hardware Opus compression.</p>
+                    </div>
+                    <div class="voice-participants" id="voice-participants"></div>
+                    <div class="media-controls">
+                        <button class="btn mute-btn" id="btn-voice-mute">Mute</button>
+                        <button class="btn hangup-btn" id="btn-voice-hangup">Hang Up</button>
+                    </div>
+                </div>
+
+                <!-- ========================================================== -->
+                <!-- APPLICATION D: VIDEO CALLS (WITH SCREEN SHARING) -->
+                <!-- ========================================================== -->
+                <div id="app-video" class="app-view hidden video-layout">
+                    <div class="video-grid" id="video-grid"></div>
+                    
+                    <!-- Floating local PIP block on mobile/windowed -->
+                    <div id="local-pip-container" class="local-pip hidden">
+                        <video id="local-pip-video" autoplay playsinline muted></video>
+                        <span class="pip-label">You (Local)</span>
+                    </div>
+
+                    <!-- Auto-hiding control tray -->
+                    <div class="media-controls video-controls" id="video-control-tray">
+                        <button class="btn pastel-mint" id="btn-video-cam">Cam Toggle</button>
+<button class="btn pastel-purple" id="btn-video-switch">🔄 Flip</button>
+                        <button class="btn mute-btn" id="btn-video-mute">Mute</button>
+                        <button class="btn pastel-blue" id="btn-video-share">Share Screen</button>
+                        <button class="btn hangup-btn" id="btn-video-hangup">End Call</button>
+                    </div>
+                </div>
+
+                <!-- ========================================================== -->
+                <!-- APPLICATION E: THE DOCUMENT CLIPBOARD -->
+                <!-- ========================================================== -->
+                <div id="app-clipboard" class="app-view hidden clipboard-layout">
+                    <div class="clipboard-header">
+                        <div class="clipboard-left">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="clipboard-edit-toggle">
+                                <span class="slider"></span>
+                                <span class="toggle-label">Edit</span>
+                            </label>
+                            <span class="clipboard-hint">Toggle ON to live-sync text across peers</span>
+                        </div>
+                        <div class="clipboard-actions">
+                            <button class="btn pastel-mint" id="btn-clip-copy">Copy All</button>
+                            <button class="btn pastel-blue" id="btn-clip-paste">Paste In</button>
+                            <button class="btn pastel-pink" id="btn-clip-clear">Clear Board</button>
+                        </div>
+                    </div>
+                    <div id="clipboard-canvas" contenteditable="false" class="clipboard-area" placeholder="Notepad is ready. Toggle Edit ON to type or paste text..."></div>
+                </div>
+
+                <!-- ========================================================== -->
+                <!-- APPLICATION F: STUDIO CANVAS (DRAW / SKETCH) -->
+                <!-- ========================================================== -->
+                <div id="app-canvas" class="app-view hidden canvas-layout">
+                    <div class="canvas-tools">
+                        <div class="tool-group">
+                            <button class="icon-btn active" id="tool-pen" title="Pen">✏️</button>
+                            <button class="icon-btn" id="tool-eraser" title="Eraser">🧽</button>
+                            <button class="icon-btn" id="tool-rect" title="Rectangle">⬜</button>
+                            <button class="icon-btn" id="tool-circle" title="Circle">⭕</button>
+                            <button class="icon-btn" id="tool-line" title="Straight Line">📏</button>
+                            <button class="icon-btn" id="tool-arrow" title="Arrow">↗️</button>
+                            <button class="icon-btn" id="tool-fill" title="Flood Fill Bucket">🪣</button>
+                        </div>
+                        
+                        <!-- Low-saturation pastel swatches & color picker -->
+                        <div class="color-palette">
+                            <button class="swatch active" style="background:#2d3748;" data-color="#2d3748"></button>
+                            <button class="swatch" style="background:#81a1c1;" data-color="#81a1c1"></button>
+                            <button class="swatch" style="background:#88c0d0;" data-color="#88c0d0"></button>
+                            <button class="swatch" style="background:#a3be8c;" data-color="#a3be8c"></button>
+                            <button class="swatch" style="background:#ebcb8b;" data-color="#ebcb8b"></button>
+                            <button class="swatch" style="background:#d08770;" data-color="#d08770"></button>
+                            <button class="swatch" style="background:#b48ead;" data-color="#b48ead"></button>
+                            <input type="color" id="canvas-color" value="#2d3748" title="Custom Color">
+                        </div>
+
+                        <div class="stroke-group">
+                            <label for="canvas-size" class="stroke-label">Size</label>
+                            <input type="range" id="canvas-size" min="1" max="28" value="3" class="pastel-slider">
+                        </div>
+
+                        <div class="canvas-action-group">
+<button class="btn pastel-gray" id="btn-canvas-fullscreen" title="Full Screen">⛶</button>
+                            <button class="btn pastel-pink" id="btn-canvas-clear">Clear Canvas</button>
+                            <button class="btn pastel-blue" id="btn-canvas-dl">Download</button>
+                        </div>
+                    </div>
+
+                    <div class="canvas-workspace">
+                        <div class="canvas-board-wrapper" id="canvas-board-wrapper">
+                            <canvas id="drawing-board"></canvas>
+<canvas id="preview-board" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;"></canvas>
+                        </div>
+                        
+                        <!-- Embedded Sidebar Communication Drawer -->
+                        <div class="embedded-sidebar" id="canvas-sidebar">
+                            <div class="sidebar-header">
+                                <span>Collaborative Feed</span>
+                                <button class="icon-btn btn-pulse-call" id="btn-canvas-voice" title="Ping Voice Call">📞</button>
+                            </div>
+                            <div class="sidebar-chat" id="canvas-chat-out"></div>
+                            <div class="sidebar-inputs">
+                                <input type="text" id="canvas-chat-in" placeholder="Quick comment...">
+                                <button class="icon-btn" id="btn-canvas-send">➤</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================================== -->
+                <!-- APPLICATION G: GRANDMASTER CHESS ENGINE -->
+                <!-- ========================================================== -->
+                <div id="app-chess" class="app-view hidden chess-layout">
+                    <div class="chess-header">
+                        <div class="fide-title-badge">
+                            <span class="static-label">Standard (FIDE Rules)</span>
+                            <span class="fide-tag">Zero Cloud Logging</span>
+                        </div>
+                        
+                        <!-- Setup Interface (Visible ONLY to Host) -->
+                        <div class="chess-host-setup" id="chess-host-setup">
+                            <div class="chess-tabs" id="chess-mode-tabs">
+                                <button class="active" data-mode="realtime">Real Time</button>
+                                <button data-mode="unlimited">Unlimited</button>
+                            </div>
+                            <div class="time-controls-wrap" id="time-controls-wrap">
+                                <label>Time: <span id="clock-minutes-display">10</span>m</label>
+                                <input type="range" id="slider-chess-time" min="1" max="60" value="10" class="pastel-slider">
+                                <label>Increment: <span id="clock-inc-display">5</span>s</label>
+                                <input type="range" id="slider-chess-inc" min="0" max="30" value="5" class="pastel-slider">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="chess-workspace">
+                        <!-- Dual Column Roster Grid & Team Isolated Audio -->
+                        <div class="chess-roster-pane">
+                            <div class="chess-status-banner" id="chess-game-status">Match In Standby</div>
+                            
+                            <!-- Team Clocks -->
+                            <div class="chess-clocks-deck">
+                                <div class="clock-card white-clock" id="white-clock-card">
+                                    <span class="clock-label">White</span>
+                                    <span class="clock-digits" id="white-timer">10:00</span>
+                                </div>
+                                <div class="clock-card black-clock" id="black-clock-card">
+                                    <span class="clock-label">Black</span>
+                                    <span class="clock-digits" id="black-timer">10:00</span>
+                                </div>
+                            </div>
+
+                            <!-- Isolated Team Voice Deck -->
+                            <div class="team-voice-deck">
+                                <div class="team-voice-status">
+                                    <span>Team Private Voice:</span>
+                                    <span id="team-voice-state" class="badge">Standby</span>
+                                </div>
+                                <button id="btn-toggle-team-voice" class="btn pastel-mint btn-small">Join Team Audio</button>
+                            </div>
+
+                            <div class="roster-grid">
+                                <div class="team-col white-team">
+                                    <h4>White Team</h4>
+                                    <ul id="roster-white" class="roster-list"></ul>
+                                </div>
+                                <div class="team-col black-team">
+                                    <h4>Black Team</h4>
+                                    <ul id="roster-black" class="roster-list"></ul>
+                                </div>
+                            </div>
+
+                            <!-- Host Roster Mini Bar Deck (Host Only) -->
+                            <div class="host-roster-bar" id="host-roster-deck">
+                                <h5>Assign Spectators (Host Only):</h5>
+                                <div id="spectator-reassign-list" class="reassign-list"></div>
+                            </div>
+
+                            <!-- Guest Spectator Action Button -->
+                            <div class="spectator-actions" id="spectator-action-box">
+                                <button class="btn pastel-lavender" id="btn-spectate">Drop to Spectator Lounge</button>
+                            </div>
+                        </div>
+
+                        <!-- 8x8 FIDE Chess Board Container -->
+                        <div class="chess-board-wrapper">
+                            <div id="chessboard" class="chessboard"></div>
+                            <div class="move-history-bar" id="move-history-bar">Move log: Game starting...</div>
+                        </div>
+
+                        <!-- Host Deployment Controls (Visible ONLY to Host) -->
+                        <div class="chess-deploy-controls" id="chess-deploy-controls">
+                            <div class="side-selectors">
+                                <label><input type="radio" name="side" value="w" checked> White</label>
+                                <label><input type="radio" name="side" value="b"> Black</label>
+                                <button class="btn pastel-mint" id="btn-chess-random">Random 🎲</button>
+                            </div>
+                            <button class="btn pastel-blue btn-large" id="btn-chess-start">Start Game</button>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+    
+    <script type="module" src="/app.js"></script>
+</body>
+</html>
